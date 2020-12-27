@@ -64,6 +64,7 @@ class Scheduler:
                     # Recursively call assignMains with the newly added-to list of assignments, and the next demo to assign
                     if self.assignMains(assignments, demoNumber + 1) == True: 
                         return True
+                    del assignments[demo]
 
         print("Violation at demoNumber " + str(demoNumber))
         return False
@@ -109,9 +110,9 @@ class Scheduler:
             isTest = assignment[2]
 
             # Sanity check - should never get hit since we test for this prior to adding
-            #if not tt.canMarket(comedian, demo, isTest):
-            #    print("This comedian can't market this show, something has gone wrong.")
-            #    return True
+            if not tt.canMarket(comedian, demo, isTest):
+               print("This comedian can't market this show, something has gone wrong.")
+               return True
         
             # Get hours that this comedian has done 
             if totalHours.get(comedian) == None:
@@ -137,6 +138,9 @@ class Scheduler:
         
         #print("")
         print("Assigning Tests: " + str(demoNumber))
+        for x in assignments:
+            print(x[1].name)
+
         tt = timetable.Timetable(2)
 
         # If we've reached assignments, we've finished so return true
