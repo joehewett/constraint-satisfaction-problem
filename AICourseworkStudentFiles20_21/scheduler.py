@@ -33,10 +33,8 @@ class Scheduler:
             # Increment showCount for this comedian 
             if showCount < 2: 
                 showCounts.update({comedian: showCount + 1})
-                print("Adding 1 to " + comedian.name + " for a total of " + str(showCount +1 ) + " shows")
             else: 
                 # If a comedian has done > 2 shows this week, return violation
-                print(comedian.name + " has violated the show count constraint")
                 return True
         
         return False
@@ -56,7 +54,6 @@ class Scheduler:
         # For the new demographic, find the first comedian that can market it, and assign them to it
         for comedian in self.comedian_List:
             if tt.canMarket(comedian, demo, False): 
-                print("Comedian " + comedian.name + " can market demo " + demo.reference)
                 # Assign the demo to the comedian 
                 assignments.update({demo: comedian})
                 # Check the 2 shows/wk constraint isn't violated
@@ -66,7 +63,6 @@ class Scheduler:
                         return True
                     del assignments[demo]
 
-        print("Violation at demoNumber " + str(demoNumber))
         return False
     
     def createSchedule(self):
@@ -97,50 +93,8 @@ class Scheduler:
     ######## TASK 2 #########
     #########################
 
-    # Violations of constraints checker for backtracking in Task 2 
-    def violationsTest(self, assignments):
-        tt = timetable.Timetable(1)
-        totalHours = {}
-
-       # print("Checking violations..")
-        # Iterate over the assignments and check that no constraints have been violated
-        for assignment in assignments:
-            demo = assignment[0]
-            comedian = assignment[1]
-            isTest = assignment[2]
-
-            # Sanity check - should never get hit since we test for this prior to adding
-            #if not tt.canMarket(comedian, demo, isTest):
-            #   print("This comedian can't market this show, something has gone wrong.")
-            #   return True
-        
-            # Get hours that this comedian has done 
-            if totalHours.get(comedian) == None:
-                hours = 0
-            else:
-                hours = totalHours.get(comedian)
-
-            # Increment hours for this comedian 
-            newHours = 1 if isTest else 2  
-            if hours + newHours < 5: 
-                # If the 4 hour/wk constraint remains unviolated after this addition, add it and return false
-                #print("Adding " + str(newHours) + " to comedian " + comedian.name + " - they have " + str(hours + newHours))
-                totalHours.update({comedian: hours + newHours})
-            else: 
-                # If a comedian has done > 4 hours this week, we have violated a constraint so return true
-                #print("Violation of hours for comedian " + comedian.name)
-                return True
-        
-        return False
-
     # Recursive algorithm for Task 2 
     def assignTests(self, extendedDemoList, comediansNotBusy, assignments, demoNumber): 
-        
-        #print("")
-        print("Assigning Tests: " + str(demoNumber))
-        #for x in assignments:
-            #print(x[1].name)
-
         tt = timetable.Timetable(2)
 
         # If we've reached assignments, we've finished so return true
@@ -151,9 +105,6 @@ class Scheduler:
         demo = extendedDemoList[demoNumber][0]
         isTest = extendedDemoList[demoNumber][1]
         
-        #for comedian, hours in comediansNotBusy.items():
-        #    print(comedian.name + " - " + str(hours))
-
         # For the new demographic, find the first comedian that can market it, and assign them to it
         for comedian, hours in comediansNotBusy.items():
             if tt.canMarket(comedian, demo, isTest): 
@@ -166,67 +117,63 @@ class Scheduler:
                     comediansNotBusy.update({comedian: hours - newHours})
                     # remove comedian from available comics if hours left is 0 
                     if hours == newHours:
-                        #print("Removing comedian " + comedian.name)
                         del comediansNotBusy[comedian]
 
                     assignments.append(t)
 
                     if self.assignTests(extendedDemoList, comediansNotBusy, assignments, demoNumber + 1) == True: 
                         return True
-                    # add hours and comedian back 
+                        
+                    # If this assignment failed, remove it and add hours and comedian back to list
                     removed = assignments.pop()
                     comedian = removed[1]
                     plusHours = 1 if removed[2] == True else 2
-                    #1print("Adding " + str(plusHours) + " to " + comedian.name)
-                    if comediansNotBusy.get(comedian) == None:
-                        alreadyHours = 0
-                    else:
-                        alreadyHours = comediansNotBusy.get(comedian)
+                    alreadyHours = 0 if comediansNotBusy.get(comedian) == None else comediansNotBusy.get(comedian)
                     comediansNotBusy.update({comedian: alreadyHours + plusHours})
 
-
-        #print("Violation at demographic " + str(demoNumber))
         return False
         
     # Main function for Task 2 - initiates a backtracking recursion (assignTests()) to solve the task 2 CSP (checked with violatesTest()) 
     def getSortedDemoList(self): 
-
         tt = timetable.Timetable(2)
         demos = []
         sortedDemos = []
 
+        # Iterate over demographics and work out how many comics can do the test/main show for the given topics
         for demographic in self.demographic_List:
             canDoMainCount = 0
+            # Check how many comics are qualified to do the main show for this demo
             for comedian in self.comedian_List:
                 if tt.canMarket(comedian, demographic, False):
                     canDoMainCount += 1
             demos.append([demographic, False, canDoMainCount])
 
             canDoTestCount = 0
+            # Check how many comics are qualified to do the test show for this demo
             for comedian in self.comedian_List:
                 if tt.canMarket(comedian, demographic, True):
                     canDoTestCount += 1
             demos.append([demographic, True, canDoTestCount])
 
-
+        # Sort list by the number of comics that can do show
         sortedDemos = sorted(demos, key = lambda p: p[2])
 
         return sortedDemos
 
-
-
+    # Task 2 driver - similar to task 1, but does some preprocessing and uses hueristics to cut down run time 
     def createTestShowSchedule(self):
 
         timetableObj = timetable.Timetable(2)
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         assignments = []
+        # Get a list of 50 shows, (1 test, 1 main for each demo) sorted by the number of comics that canMarket that show
         extendedDemoList = self.getSortedDemoList()
 
+        # We're going to keep a list of comedians and their avaialable time, so we can avoid trying to assign shows to fully-booked comedians
         comediansNotBusy = {}
         for comedian in self.comedian_List:
             comediansNotBusy.update({comedian: 4})
 
-        print(comediansNotBusy)
         # Begin backtrack to find a valid pairing between demographics and comedians
         if self.assignTests(extendedDemoList, comediansNotBusy, assignments, 0) == False:
             print("No valid assignment of demographics (including tests) to comedians was found")
@@ -235,12 +182,8 @@ class Scheduler:
         # Sort the list alphabetically by comedian name  
         sortedList = sorted(assignments, key = lambda c: c[1].name)
 
-        #for x in range(50):
-        #    print(sortedList[x][2])
-
         # Add all the demo/comedian pairs as sessions
         # Filling by session rather than day, in combination with our ordered list of pairs, means we'll never schedule a comedian for 2 sessions in one day
-
         for session in range(1,11):
             for day in range(5):
                 # s counts from 0 to 49
