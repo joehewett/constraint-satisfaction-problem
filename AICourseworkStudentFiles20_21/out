@@ -1,0 +1,56 @@
+Comedian Eberhard can market demo JT488
+Comedian Eberhard can market demo MP360
+Comedian Griscom can market demo JZ709
+Comedian Bandy can market demo OG896
+Comedian Gillman can market demo AL302
+Comedian Yard can market demo IP753
+Comedian Bandy can market demo TQ564
+Comedian Banfield can market demo MP829
+Comedian Lester can market demo ZD855
+Comedian Hoppes can market demo WY654
+Comedian Pickens can market demo PK355
+Comedian Hoppes can market demo IJ256
+Comedian Meisinger can market demo CP919
+Comedian Geyer can market demo DS541
+Comedian Linderman can market demo QK600
+Comedian Yard can market demo FN756
+Comedian Mclaurin can market demo VT986
+Comedian Lester can market demo AV772
+Comedian Daley can market demo UG510
+Comedian Geyer can market demo PY989
+Comedian Hoppes can market demo OY273
+Violation at demoNumber 20
+Violation at demoNumber 19
+Violation at demoNumber 18
+Comedian Herrick can market demo AV772
+Violation at demoNumber 17
+Comedian Gillman can market demo VT986
+Comedian Fithian can market demo VT986
+Violation at demoNumber 16
+Comedian Herrick can market demo FN756
+Violation at demoNumber 15
+Comedian Yard can market demo QK600
+Comedian Geyer can market demo QK600
+Violation at demoNumber 14
+Comedian Ridel can market demo DS541
+Violation at demoNumber 13
+Violation at demoNumber 12
+Comedian Herrick can market demo IJ256
+Comedian Mccoll can market demo IJ256
+Comedian Meisinger can market demo CP919
+Comedian Geyer can market demo DS541
+Comedian Ridel can market demo DS541
+Comedian Linderman can market demo QK600
+Comedian Yard can market demo FN756
+Comedian Mclaurin can market demo VT986
+Comedian Lester can market demo AV772
+Comedian Daley can market demo UG510
+Comedian Geyer can market demo PY989
+Comedian Hoppes can market demo OY273
+Comedian Knighton can market demo KC583
+Comedian Flinn can market demo RI931
+Comedian Funkhouser can market demo SC235
+Comedian Meisinger can market demo JH279
+Schedule is legal.
+Schedule has a cost of 0
+{'Monday': {1: [['Bandy', ['Modern Life', 'Roasts', 'Dating']], ['OG896', ['Roasts', 'Dating']], 'main'], 2: [['Eberhard', ['Money', 'Surrealism', 'Dating']], ['MP360', ['Money', 'Surrealism', 'Dating']], 'main'], 3: [['Griscom', ['Travel', 'Family', 'Roasts']], ['JZ709', ['Family', 'Roasts']], 'main'], 4: [['Lester', ['Satire', 'Money', 'Family']], ['AV772', ['Family', 'Satire']], 'main'], 5: [['Meisinger', ['Children', 'Modern Life', 'Topical']], ['JH279', ['Children', 'Modern Life']], 'main']}, 'Tuesday': {1: [['Bandy', ['Modern Life', 'Roasts', 'Dating']], ['TQ564', ['Modern Life', 'Roasts']], 'main'], 2: [['Flinn', ['Roasts', 'Music', 'Surrealism']], ['RI931', ['Roasts', 'Music']], 'main'], 3: [['Hoppes', ['Social Media', 'One Liners', 'Family']], ['WY654', ['One Liners', 'Family']], 'main'], 4: [['Linderman', ['Celebrities', 'Satire', 'Politics']], ['QK600', ['Satire', 'Celebrities']], 'main'], 5: [['Pickens', ['Celebrities', 'Social Media', 'Children']], ['PK355', ['Celebrities', 'Children']], 'main']}, 'Wednesday': {1: [['Banfield', ['Social Media', 'Roasts', 'Money']], ['MP829', ['Social Media', 'Roasts']], 'main'], 2: [['Funkhouser', ['Politics', 'Family', 'Surrealism']], ['SC235', ['Surrealism', 'Politics']], 'main'], 3: [['Hoppes', ['Social Media', 'One Liners', 'Family']], ['OY273', ['Social Media', 'One Liners']], 'main'], 4: [['Mccoll', ['Family', 'Money', 'Social Media']], ['IJ256', ['Social Media', 'Family']], 'main'], 5: [['Ridel', ['Music', 'Celebrities', 'Modern Life']], ['DS541', ['Celebrities', 'Music']], 'main']}, 'Thursday': {1: [['Daley', ['Modern Life', 'Roasts', 'Social Media']], ['UG510', ['Social Media', 'Modern Life']], 'main'], 2: [['Geyer', ['Satire', 'Music', 'Celebrities']], ['PY989', ['Music', 'Satire']], 'main'], 3: [['Knighton', ['Surrealism', 'Music', 'Social Media']], ['KC583', ['Surrealism', 'Music']], 'main'], 4: [['Mclaurin', ['Social Media', 'Roasts', 'Politics']], ['VT986', ['Politics', 'Roasts']], 'main'], 5: [['Yard', ['Celebrities', 'Social Media', 'Satire']], ['IP753', ['Social Media', 'Celebrities']], 'main']}, 'Friday': {1: [['Eberhard', ['Money', 'Surrealism', 'Dating']], ['JT488', ['Money', 'Surrealism', 'Dating']], 'main'], 2: [['Gillman', ['Politics', 'Dating', 'Roasts']], ['AL302', ['Dating', 'Politics']], 'main'], 3: [['Lester', ['Satire', 'Money', 'Family']], ['ZD855', ['Family', 'Money']], 'main'], 4: [['Meisinger', ['Children', 'Modern Life', 'Topical']], ['CP919', ['Topical', 'Modern Life']], 'main'], 5: [['Yard', ['Celebrities', 'Social Media', 'Satire']], ['FN756', ['Satire', 'Social Media']], 'main']}}
