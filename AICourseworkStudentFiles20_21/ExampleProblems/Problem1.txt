@@ -29,8 +29,8 @@ Munoz,Surrealism,Family,Modern Life
 Mccoll,Family,Money,Social Media
 Eberhard,Money,Surrealism,Dating
 ===
-JT488,Money,Surrealism,Dating
-MP360,Money,Surrealism,Dating
+JT488,Family,Politics
+MP360,Politics,Satire
 JZ709,Family,Roasts
 OG896,Roasts,Dating
 AL302,Dating,Politics
@@ -54,5 +54,3 @@ KC583,Surrealism,Music
 RI931,Roasts,Music
 SC235,Surrealism,Politics
 JH279,Children,Modern Life
-
-
