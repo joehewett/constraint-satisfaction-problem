@@ -93,8 +93,22 @@ class Scheduler:
     ######## TASK 2 #########
     #########################
 
+    def getShowCounts(self, comicScore, assignments):
+        for a in assignments:
+            c = a[1]
+            t = a[2]
+            score = 1 if t else 5
+
+            if comicScore.get(c) == None:
+                oldScore = 0
+            else:
+                oldScore = comicScore.get(c)
+            
+            newScore = score + oldScore
+            comicScore.update({c: newScore})
+        
     # Recursive algorithm for Task 2 
-    def assignTests(self, extendedDemoList, comediansNotBusy, assignments, demoNumber): 
+    def assignMainsAndTest(self, extendedDemoList, comediansNotBusy, assignments, demoNumber): 
         tt = timetable.Timetable(2)
 
         # If we've reached assignments, we've finished so return true
@@ -121,7 +135,7 @@ class Scheduler:
 
                     assignments.append(t)
 
-                    if self.assignTests(extendedDemoList, comediansNotBusy, assignments, demoNumber + 1) == True: 
+                    if self.assignMainsAndTest(extendedDemoList, comediansNotBusy, assignments, demoNumber + 1) == True: 
                         return True
                         
                     # If this assignment failed, remove it and add hours and comedian back to list
@@ -133,7 +147,7 @@ class Scheduler:
 
         return False
         
-    # Main function for Task 2 - initiates a backtracking recursion (assignTests()) to solve the task 2 CSP (checked with violatesTest()) 
+    # Main function for Task 2 - initiates a backtracking recursion (assignMainsAndTest()) to solve the task 2 CSP (checked with violatesTest()) 
     def getSortedDemoList(self): 
         tt = timetable.Timetable(2)
         demos = []
@@ -175,7 +189,7 @@ class Scheduler:
             comediansNotBusy.update({comedian: 4})
 
         # Begin backtrack to find a valid pairing between demographics and comedians
-        if self.assignTests(extendedDemoList, comediansNotBusy, assignments, 0) == False:
+        if self.assignMainsAndTest(extendedDemoList, comediansNotBusy, assignments, 0) == False:
             print("No valid assignment of demographics (including tests) to comedians was found")
             return False
 
@@ -185,144 +199,177 @@ class Scheduler:
         # Add all the demo/comedian pairs as sessions
         # Filling by session rather than day, in combination with our ordered list of pairs, means we'll never schedule a comedian for 2 sessions in one day
         for session in range(1,11):
+            out = " | "
             for day in range(5):
                 # s counts from 0 to 49
                 s = (session - 1) * 5 + day
                 isTest = sortedList[s][2]
+                out += "T " if isTest else "M "
+                out += sortedList[s][1].name[:2] + " | "
                 test = "test" if isTest else "main"
                 timetableObj.addSession(days[day], session, sortedList[s][1], sortedList[s][0], test)
+            print(out)
         #Here is where you schedule your timetable
 
         return timetableObj
+        
+    #########################
+    ######## TASK 3 #########
+    #########################
 
-    #It costs £500 to hire a comedian for a single main show.
-    #If we hire a comedian for a second show, it only costs £300. (meaning 2 shows cost £800 compared to £1000)
-    #If those two shows are run on consecutive days, the second show only costs £100. (meaning 2 shows cost £600 compared to £1000)
+    def getDailySchedules(self, assignments):
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        dailySchedules = {"Monday" : [], "Tuesday" : [], "Wednesday" : [], "Thursday" : [], "Friday" : []}
+        comicAssignments = {}
 
-    #It costs £250 to hire a comedian for a test show, and then £50 less for each extra test show (£200, £150 and £100)
-    #If a test shows occur on the same day as anything else a comedian is in, then its cost is halved. 
+        for a in assignments:
+            d = a[0] # demographic
+            c = a[1] # comedian assigned to that demographic
+            t = a[2] # boolean indicating true=test, false=main
+            comicShows = comicAssignments.get(c) or {}
+            testsOrMains = comicShows.get(t) or []
+            testsOrMains.append([d,c,t])
+            comicShows.update({t: testsOrMains})
+            comicAssignments.update({c: comicShows})
 
-    #Using this method, return a timetable object that produces a schedule that is close, or equal, to the optimal solution.
-    #You are not expected to always find the optimal solution, but you should be as close as possible. 
-    #You should consider the lecture material, particular the discussions on heuristics, and how you might develop a heuristic to help you here. 
+        dayCount = 0
+        for comic, shows in comicAssignments.items():
+            if dayCount == 4:
+                dayCount = 0
+
+            mains = shows.get(False) or []
+            tests = shows.get(True) or []
+            
+            if len(mains) == 2: 
+                today = dailySchedules.get(days[dayCount])
+                tomorrow = dailySchedules.get(days[dayCount+1])
+                if len(today) < 10 and len(tomorrow) < 10:
+                    today.append(mains.pop())
+                    tomorrow.append(mains.pop())
+                    dailySchedules.update({days[dayCount]: today})
+                    dailySchedules.update({days[dayCount+1]: tomorrow})
+                    dayCount += 2
+            shows.update({0: mains})
+            shows.update({1: tests})
+            comicAssignments.update({comic: shows})
+
+        for comic, shows in comicAssignments.items():
+            mains = shows.get(False) or []
+            tests = shows.get(True) or []
+            if len(tests) >= 2:
+                for day in range(5):
+                    today = dailySchedules.get(days[day])
+                    if len(tests) < 2:
+                        break
+                    print(days[day] + " has " + str(len(today)))
+                    if len(today) <= 8:
+                        today.append(tests.pop())
+                        today.append(tests.pop())
+                        dailySchedules.update({days[day]: today})
+                        print("Added 2 tests to " + days[day] + " - length is now " + str(len(today)))
+                        
+            shows.update({0: mains})
+            shows.update({1: tests})
+            comicAssignments.update({comic: shows})
+
+        for comic, shows in comicAssignments.items():
+            mains = shows.get(0)
+            tests = shows.get(1)
+            for day in range(5):
+                today = dailySchedules.get(days[day])
+                if len(mains) == 1 and len(today) < 10:
+                    today.append(mains.pop())
+                if len(tests) == 1 and len(today) < 10:
+                    today.append(tests.pop())
+                dailySchedules.update({days[day]: today})
+            shows.update({0: mains})
+            shows.update({1: tests})
+            comicAssignments.update({comic: shows})
+
+        return dailySchedules
+
+
     def createMinCostSchedule(self):
-        #Do not change this line
         timetableObj = timetable.Timetable(3)
+        assignments = []
+
+        # Get a list of 50 shows, (1 test, 1 main for each demo) sorted by the number of comics that canMarket that show
+        extendedDemoList = self.getSortedDemoList()
+
+        # We're going to keep a list of comedians and their available time, so we can avoid trying to assign shows to fully-booked comedians
+        comediansNotBusy = {}
+        for comedian in self.comedian_List:
+            comediansNotBusy.update({comedian: 4})
+
+        # Begin backtrack to find a valid pairing between demographics and comedians
+        if self.assignMainsAndTest(extendedDemoList, comediansNotBusy, assignments, 0) == False:
+            print("No valid assignment of demographics (including tests) to comedians was found")
+            return False
+
+        dailySchedules = self.getDailySchedules(assignments)
+        for day, sessions in dailySchedules.items():
+            print(len(sessions))
+
+        # Add all the demo/comedian pairs as sessions
+        output = ["","","","","","","","","",""]
+        for day, sessions in dailySchedules.items():
+            for session in range(10):
+                demo = sessions[session][0]
+                comedian = sessions[session][1]
+                isTest = sessions[session][2]
+                output[session] += (" T " if isTest else " M ") + comedian.name[:2] + " |"
+                timetableObj.addSession(day, session + 1, comedian, demo, "test" if isTest else "main")
+
+        for o in output:
+            print(o)
+
+        return timetableObj
+
+        # #This line generates a random timetable, that may not be valid. You can use this or delete it.
+        # #self.randomMainSchedule(timetableObj)
+
+        # Optimal Solution
+        # 12 Comedians doing 2 main shows each, 1 per day on Mon-Tue, Tue-Wed, Wed-Thurs, Thurs-Fri - £7200
+        # 6  Comedians doing 4 test shows each, 2 per day on any days - £2100 
+        # 1  Comedian  doing 1 test show and 1 main show, on different days. - £750
+
+        # Ma | Ma | Mb | Mb | Mt
+        # Mc | Mc | Md | Md | Tm
+        # Me | Me | Mf | Mf | Tm
+        # Mg | Mg | Mh | Mh | Tn
+        # Mi | Mi | Mj | Mj | Tn
+        # Mk | Mk | Ml | Ml | To 
+        # Tm | Tn | To | Tp | To
+        # Tm | Tn | To | Tp | Tp
+        # Tq | Tr | Ts | Ts | Tp
+        # Tq | Tr | Ts | Ts | Ty
+
+        # Dict of days containing lists
+        # Dict of Comedian->List[Demo, isTest]
+        # List of mainers: [Comedian, Demo]
+        # List of testers [Comedian, Demo]
+        # List of Others: [Comedian, Demo, isTest]
+        # Fill MT, WT, with mainers
+        # Then, if M > 2 free, fill M with testers, else T, else W etc
+        # If 
+        # If 0,1 or 1,0, assign anywhere
+        # Strategy 
+        # Don't randomly pick comics, or pick them in order of their availability.
+        # Instead, pick them based on a score? 
+        # Score can be calculated on the fly, in the recursive call
+        # Take in a list of comics and their assignments 
+        # If current demographic is Main, then order by comics that have 1 main 
+        # If current dmeographic is Test, then order by comcis that have 3, 2, 1 tests
+        # Once a comic is complete, delete 
+        # 
+        # Utility functions
+        # Num comics with 2 mains
+        # Num comics with 4 tests 
+        # Num comics with other configurations 
 
         #Here is where you schedule your timetable
 
         #This line generates a random timetable, that may not be valid. You can use this or delete it.
-        self.randomMainAndTestSchedule(timetableObj)
-
-        #Do not change this line
-        return timetableObj
-
-
-    #This simplistic approach merely assigns each demographic and comedian to a random, iterating through the timetable. 
-    def randomMainSchedule(self,timetableObj):
-
-        sessionNumber = 1
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-        dayNumber = 0
-        for demographic in self.demographic_List:
-            comedian = self.comedian_List[random.randrange(0, len(self.comedian_List))]
-
-            timetableObj.addSession(days[dayNumber], sessionNumber, comedian, demographic, "main")
-
-            sessionNumber = sessionNumber + 1
-
-            if sessionNumber == 6:
-                sessionNumber = 1
-                dayNumber = dayNumber + 1
-
-    #This simplistic approach merely assigns each demographic to a random main and test show, with a random comedian, iterating through the timetable.
-    def randomMainAndTestSchedule(self,timetableObj):
-
-        sessionNumber = 1
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-        dayNumber = 0
-        for demographic in self.demographic_List:
-            comedian = self.comedian_List[random.randrange(0, len(self.comedian_List))]
-
-            timetableObj.addSession(days[dayNumber], sessionNumber, comedian, demographic, "main")
-
-            sessionNumber = sessionNumber + 1
-
-            if sessionNumber == 11:
-                sessionNumber = 1
-                dayNumber = dayNumber + 1
-
-        for demographic in self.demographic_List:
-            comedian = self.comedian_List[random.randrange(0, len(self.comedian_List))]
-
-            timetableObj.addSession(days[dayNumber], sessionNumber, comedian, demographic, "test")
-
-            sessionNumber = sessionNumber + 1
-
-            if sessionNumber == 11:
-                sessionNumber = 1
-                dayNumber = dayNumber + 1
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        # demos = {}
-        # for demographic in self.demographic_List:
-        #     canDoCount = 0
-        #     for comedian in self.comedian_List:
-        #         if timetableObj.canMarket(comedian, demographic, False):
-        #             canDoCount += 1
-        #     demos.update({demographic.reference: canDoCount})
-
-        #     print(str(demographic.topics) + " can be filled by " + str(demos.get(demographic.reference)) + " Comedians")         
-                
-
-        # for demo in sorted(demos, key=demos.get):
-        #     print(demo + " " + str(demos.get(demo)))
-
-        # for demographic in self.demographic_List:
-        #     # only assign commedian if canMarket
-        #     # canMarket(self, comedian, demographic, isTest)
-        #     # and that comedian has done < 3 shows so far, and < 2 today
-        #     for comedian in self.comedian_List:
-        #         if timetableObj.canMarket(comedian, demographic, False):
-        #             print("Comedian " + comedian.name + " is being assigned to demographic " + demographic.reference)
-        #             print(comedian.themes)
-        #             print(demographic.topics)
-        #             print("")
-
-        #             timetableObj.addSession(days[dayNumber], sessionNumber, comedian, demographic, "main")
-        #             break
-
-        #     sessionNumber = sessionNumber + 1
-
-        #     if sessionNumber == 6:
-        #         sessionNumber = 1
-        #         dayNumber = dayNumber + 1
-
-        # #This line generates a random timetable, that may not be valid. You can use this or delete it.
-        # #self.randomMainSchedule(timetableObj)
 
     #Using the comedian_List and demographic_List, create a timetable of 5 slots for each of the 5 work days of the week.
     #The slots are labelled 1-5, and so when creating the timetable, they can be assigned as such:
@@ -363,3 +410,14 @@ class Scheduler:
     #To reiterate, the five calls are timetableObj.addSession, d.name, d.genres, c.name, c.talents
 
     #This method should return a timetable object with a schedule that is legal according to all constraints of task 1.
+
+    #It costs £500 to hire a comedian for a single main show.
+    #If we hire a comedian for a second show, it only costs £300. (meaning 2 shows cost £800 compared to £1000)
+    #If those two shows are run on consecutive days, the second show only costs £100. (meaning 2 shows cost £600 compared to £1000)
+
+    #It costs £250 to hire a comedian for a test show, and then £50 less for each extra test show (£200, £150 and £100)
+    #If a test shows occur on the same day as anything else a comedian is in, then its cost is halved. 
+
+    #Using this method, return a timetable object that produces a schedule that is close, or equal, to the optimal solution.
+    #You are not expected to always find the optimal solution, but you should be as close as possible. 
+    #You should consider the lecture material, particular the discussions on heuristics, and how you might develop a heuristic to help you here. 

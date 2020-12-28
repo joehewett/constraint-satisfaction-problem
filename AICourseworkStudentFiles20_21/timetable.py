@@ -54,7 +54,7 @@ class Timetable:
             elif show_type != "main" and show_type != "test":
                 raise ValueError("show_type must be either: main or test") 
             else:
-                print("Inserting into schedule: " + str(day) + " - " + str(timeslot))
+                #print("Inserting into schedule: " + str(day) + " - " + str(timeslot))
                 self.schedule[day][timeslot] = [comedian, demographic, show_type]
 
     #This method calls the correct checker based on the task
