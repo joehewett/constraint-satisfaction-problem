@@ -288,9 +288,171 @@ class Scheduler:
 
         return dailySchedules
 
+    def getDay(self, slotNumber): 
+        i = slotNumber
+        if i < 10:
+            i = 0
+        else:
+            while i >= 10:
+                i = i / 10
+        day = int(i) 
+        return day
+
+    def scanSurroundings(self, timeslots, n, consecutiveMains, testsToday, mainsToday):
+        day = self.getDay(n)
+
+        todaysStart = day * 10
+        yesterdaysStart = (todaysStart - 10) if todaysStart > 0 else 0 
+        tomorrowsStart = (todaysStart + 10) if todaysStart < 40 else 40
+        
+        testsToday = 0 
+        mainsToday = 0
+        for i in range(todaysStart, todaysStart + 10):
+            if timeslots[i] is not None and timeslots[i][2] == True:
+                testsToday += 1 
+            elif timeslots[i] is not None and timeslots[i][2] == False:
+                mainsToday += 1
+
+        consecutiveMains = False
+        for i in range(yesterdaysStart, todaysStart):
+            if timeslots[i] is not None and timeslots[i][2] == False:
+                consecutiveMains = True
+        for i in range(tomorrowsStart, tomorrowsStart + 10):
+            if timeslots[i] is not None and timeslots[i][2] == False:
+                consecutiveMains = True
+    
+    def applySoftConstraints(self, unorderedAssignments, n, timeslots):
+        
+        assignmentScores = {}
+        day = self.getDay(n)
+
+        todaysStart = day * 10
+        yesterdaysStart = (todaysStart - 10) if todaysStart > 0 else 0 
+
+
+        for assignment in unorderedAssignments:
+            assignmentScores.update({tuple(assignment): 0})
+            mainYesterday = False
+            mainToday = False 
+            testsToday = 0
+            d = assignment[0]
+            c = assignment[1]
+            test = assignment[2]
+
+            for i in range(todaysStart, todaysStart + 10):
+                if timeslots[i] is not None and timeslots[i][1] == c:
+                    if timeslots[i][2] == True:
+                        testsToday += 1 
+                    elif timeslots[i][2] == False:
+                        mainToday = True
+            if yesterdaysStart > 0:
+                for i in range(yesterdaysStart, yesterdaysStart + 10):
+                    if timeslots[i] is not None and timeslots[i][1] == c:
+                        if timeslots[i][2] == False:
+                            mainYesterday = True 
+                    
+            if not test and not mainToday and mainYesterday:
+                assignmentScores.update({assignment: 400})
+            if test and testsToday == 1:
+                assignmentScores.update({assignment: 300})
+                
+        
+        sortedScores = sorted(assignmentScores.items(), key = lambda a:a[1], reverse=True)
+        sortedAssignments = []
+        #print("scores in order:")
+        for assignment in sortedScores:
+            sortedAssignments.append(assignment[0])
+        #    print(assignment[1])
+
+        return sortedAssignments
+
+    def futureFailureDetected(self, slotNumber, timeslots, assignments):
+        day = self.getDay(slotNumber)
+
+        # If we're on day 4 and still have > 2 hours of shows in assignments, we're going to have a bad time
+        comicHours = {}
+        if day == 4:
+            for a in assignments:
+                c = a[1]
+                t = a[2]
+                newHours = 1 if t else 2
+                hoursAlready = comicHours.get(c) if comicHours.get(c) is not None else 0
+                comicHours.update({c: hoursAlready + newHours})
+
+            for i in range(40, 50):
+                if timeslots[i] is None:
+                    continue
+                if timeslots[i][1] == c:
+                    hoursAlready = comicHours.get(c) if comicHours.get(c) is not None else 0
+                    comicHours.update({c: hoursAlready + 1 if timeslots[i][2] else 2})
+
+        for comic, hours in comicHours.items():
+            if hours > 2: 
+                return True
+
+        return False 
+
+    def scheduleViolations(self, timeslots, slotNumber, assignments, assignment):
+        day = self.getDay(slotNumber)
+        todaysStart = day * 10
+
+        # Try to detect if this configuration is destined to fail so we can backtrack early
+        if self.futureFailureDetected(slotNumber, timeslots, assignments):
+            return True
+
+
+        comedian = assignment[1]
+        hours = 1 if assignment[2] == True else 2
+        todayHours = 0 
+        for i in range(todaysStart, todaysStart + 10):
+            if timeslots[i] == None:
+                continue
+            if timeslots[i][1] == comedian:
+                if timeslots[i][2] == False:
+                    todayHours += 2
+                elif timeslots[i][2] == True:
+                    todayHours += 1
+        
+        if todayHours + hours > 2:
+            return True
+
+        return False
+
+    def assignShowsToDays(self, assignments, timeslots, slotNumber):
+        consecutiveMains = False
+        testsToday = 0
+        mainsToday = 0 
+
+        # If we've reached 50 assignments, we've finished (base) so return true
+        if slotNumber >= 50: 
+            return True
+        else:
+            self.scanSurroundings(timeslots, slotNumber, consecutiveMains, testsToday, mainsToday)
+
+        if timeslots[slotNumber] is not None:
+            print("Error - trying to allocate to a timeslot that has already been filled")
+
+        ### TODO: order assignments by preference using scanSurroundings
+        ### TODO: detect failure early 
+        ### TODO: add heuristics to assignment backtrack to get optimum assignments
+
+        assignments = self.applySoftConstraints(assignments, slotNumber, timeslots)
+        
+        for assignment in assignments:
+            if self.scheduleViolations(timeslots, slotNumber, assignments, assignment) == False:
+                timeslots[slotNumber] = assignment
+                assignments.remove(assignment)
+                if self.assignShowsToDays(assignments, timeslots, slotNumber + 1) == True: 
+                    return True
+                assignments.append(timeslots[slotNumber])
+                timeslots[slotNumber] = None
+
+        return False
+
 
     def createMinCostSchedule(self):
         timetableObj = timetable.Timetable(3)
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         assignments = []
 
         # Get a list of 50 shows, (1 test, 1 main for each demo) sorted by the number of comics that canMarket that show
@@ -306,70 +468,88 @@ class Scheduler:
             print("No valid assignment of demographics (including tests) to comedians was found")
             return False
 
-        dailySchedules = self.getDailySchedules(assignments)
-        for day, sessions in dailySchedules.items():
-            print(len(sessions))
+        sortedAssignments = sorted(assignments, key = lambda a: a[1].name)
+        for a in sortedAssignments:
+            print(a[1].name + " -      " + str(a[2]))
+        timeslots = [None] * 50
+        if self.assignShowsToDays(sortedAssignments, timeslots, 0) == False:
+            print("No valid way of assigning those demographics to days (cap)")
+            return False
 
-        # Add all the demo/comedian pairs as sessions
         output = ["","","","","","","","","",""]
-        for day, sessions in dailySchedules.items():
-            for session in range(10):
-                demo = sessions[session][0]
-                comedian = sessions[session][1]
-                isTest = sessions[session][2]
-                output[session] += (" T " if isTest else " M ") + comedian.name[:2] + " |"
-                timetableObj.addSession(day, session + 1, comedian, demo, "test" if isTest else "main")
+        for i in range(50):
+            day = self.getDay(i)
+            session = (i % 10)
+
+            d = timeslots[i][0]
+            c = timeslots[i][1]
+            t = timeslots[i][2]
+            output[session] += (" T " if t else " M ") + c.name[:2] + " |"
+            timetableObj.addSession(days[day], session + 1, c, d, "test" if t else "main")
 
         for o in output:
             print(o)
 
+        
+
+        # # Add all the demo/comedian pairs as sessions
+        # for day, sessions in dailySchedules.items():
+        #     for session in range(10):
+        #         demo = sessions[session][0]
+        #         comedian = sessions[session][1]
+        #         isTest = sessions[session][2]
+        #         timetableObj.addSession(day, session + 1, comedian, demo, "test" if isTest else "main")
+
+        # for o in output:
+        #     print(o)
+
         return timetableObj
 
-        # #This line generates a random timetable, that may not be valid. You can use this or delete it.
-        # #self.randomMainSchedule(timetableObj)
+    # #This line generates a random timetable, that may not be valid. You can use this or delete it.
+    # #self.randomMainSchedule(timetableObj)
 
-        # Optimal Solution
-        # 12 Comedians doing 2 main shows each, 1 per day on Mon-Tue, Tue-Wed, Wed-Thurs, Thurs-Fri - £7200
-        # 6  Comedians doing 4 test shows each, 2 per day on any days - £2100 
-        # 1  Comedian  doing 1 test show and 1 main show, on different days. - £750
+    # Optimal Solution
+    # 12 Comedians doing 2 main shows each, 1 per day on Mon-Tue, Tue-Wed, Wed-Thurs, Thurs-Fri - £7200
+    # 6  Comedians doing 4 test shows each, 2 per day on any days - £2100 
+    # 1  Comedian  doing 1 test show and 1 main show, on different days. - £750
 
-        # Ma | Ma | Mb | Mb | Mt
-        # Mc | Mc | Md | Md | Tm
-        # Me | Me | Mf | Mf | Tm
-        # Mg | Mg | Mh | Mh | Tn
-        # Mi | Mi | Mj | Mj | Tn
-        # Mk | Mk | Ml | Ml | To 
-        # Tm | Tn | To | Tp | To
-        # Tm | Tn | To | Tp | Tp
-        # Tq | Tr | Ts | Ts | Tp
-        # Tq | Tr | Ts | Ts | Ty
+    # Ma | Ma | Mb | Mb | Mt
+    # Mc | Mc | Md | Md | Tm
+    # Me | Me | Mf | Mf | Tm
+    # Mg | Mg | Mh | Mh | Tn
+    # Mi | Mi | Mj | Mj | Tn
+    # Mk | Mk | Ml | Ml | To 
+    # Tm | Tn | To | Tp | To
+    # Tm | Tn | To | Tp | Tp
+    # Tq | Tr | Ts | Ts | Tp
+    # Tq | Tr | Ts | Ts | Ty
 
-        # Dict of days containing lists
-        # Dict of Comedian->List[Demo, isTest]
-        # List of mainers: [Comedian, Demo]
-        # List of testers [Comedian, Demo]
-        # List of Others: [Comedian, Demo, isTest]
-        # Fill MT, WT, with mainers
-        # Then, if M > 2 free, fill M with testers, else T, else W etc
-        # If 
-        # If 0,1 or 1,0, assign anywhere
-        # Strategy 
-        # Don't randomly pick comics, or pick them in order of their availability.
-        # Instead, pick them based on a score? 
-        # Score can be calculated on the fly, in the recursive call
-        # Take in a list of comics and their assignments 
-        # If current demographic is Main, then order by comics that have 1 main 
-        # If current dmeographic is Test, then order by comcis that have 3, 2, 1 tests
-        # Once a comic is complete, delete 
-        # 
-        # Utility functions
-        # Num comics with 2 mains
-        # Num comics with 4 tests 
-        # Num comics with other configurations 
+    # Dict of days containing lists
+    # Dict of Comedian->List[Demo, isTest]
+    # List of mainers: [Comedian, Demo]
+    # List of testers [Comedian, Demo]
+    # List of Others: [Comedian, Demo, isTest]
+    # Fill MT, WT, with mainers
+    # Then, if M > 2 free, fill M with testers, else T, else W etc
+    # If 
+    # If 0,1 or 1,0, assign anywhere
+    # Strategy 
+    # Don't randomly pick comics, or pick them in order of their availability.
+    # Instead, pick them based on a score? 
+    # Score can be calculated on the fly, in the recursive call
+    # Take in a list of comics and their assignments 
+    # If current demographic is Main, then order by comics that have 1 main 
+    # If current dmeographic is Test, then order by comcis that have 3, 2, 1 tests
+    # Once a comic is complete, delete 
+    # 
+    # Utility functions
+    # Num comics with 2 mains
+    # Num comics with 4 tests 
+    # Num comics with other configurations 
 
-        #Here is where you schedule your timetable
+    #Here is where you schedule your timetable
 
-        #This line generates a random timetable, that may not be valid. You can use this or delete it.
+    #This line generates a random timetable, that may not be valid. You can use this or delete it.
 
     #Using the comedian_List and demographic_List, create a timetable of 5 slots for each of the 5 work days of the week.
     #The slots are labelled 1-5, and so when creating the timetable, they can be assigned as such:
@@ -421,3 +601,17 @@ class Scheduler:
     #Using this method, return a timetable object that produces a schedule that is close, or equal, to the optimal solution.
     #You are not expected to always find the optimal solution, but you should be as close as possible. 
     #You should consider the lecture material, particular the discussions on heuristics, and how you might develop a heuristic to help you here. 
+
+                # print("Adding assignment: " + str(assignment) + " to slot " + str(slotNumber))
+                # print("Removing assignment from assignments. Assignments before:")
+                # for a in assignments:
+                #     print(a)
+                # print("Assignments after removing assignment:")
+                # for a in assignments:
+                #     print(a)
+
+                    
+                # print("Adding back assignment: " + str(timeslots[slotNumber]) + " from slot " + str(slotNumber))
+                # print("assignments now looks like:")
+                # for a in assignments:
+                #     print(a)
