@@ -119,6 +119,10 @@ class Scheduler:
         demo = extendedDemoList[demoNumber][0]
         isTest = extendedDemoList[demoNumber][1]
         
+        scnb = sorted(comediansNotBusy, key=comediansNotBusy.get)
+        for a in scnb:
+            print(a)
+
         # For the new demographic, find the first comedian that can market it, and assign them to it
         for comedian, hours in comediansNotBusy.items():
             if tt.canMarket(comedian, demo, isTest): 
@@ -217,77 +221,6 @@ class Scheduler:
     ######## TASK 3 #########
     #########################
 
-    def getDailySchedules(self, assignments):
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-        dailySchedules = {"Monday" : [], "Tuesday" : [], "Wednesday" : [], "Thursday" : [], "Friday" : []}
-        comicAssignments = {}
-
-        for a in assignments:
-            d = a[0] # demographic
-            c = a[1] # comedian assigned to that demographic
-            t = a[2] # boolean indicating true=test, false=main
-            comicShows = comicAssignments.get(c) or {}
-            testsOrMains = comicShows.get(t) or []
-            testsOrMains.append([d,c,t])
-            comicShows.update({t: testsOrMains})
-            comicAssignments.update({c: comicShows})
-
-        dayCount = 0
-        for comic, shows in comicAssignments.items():
-            if dayCount == 4:
-                dayCount = 0
-
-            mains = shows.get(False) or []
-            tests = shows.get(True) or []
-            
-            if len(mains) == 2: 
-                today = dailySchedules.get(days[dayCount])
-                tomorrow = dailySchedules.get(days[dayCount+1])
-                if len(today) < 10 and len(tomorrow) < 10:
-                    today.append(mains.pop())
-                    tomorrow.append(mains.pop())
-                    dailySchedules.update({days[dayCount]: today})
-                    dailySchedules.update({days[dayCount+1]: tomorrow})
-                    dayCount += 2
-            shows.update({0: mains})
-            shows.update({1: tests})
-            comicAssignments.update({comic: shows})
-
-        for comic, shows in comicAssignments.items():
-            mains = shows.get(False) or []
-            tests = shows.get(True) or []
-            if len(tests) >= 2:
-                for day in range(5):
-                    today = dailySchedules.get(days[day])
-                    if len(tests) < 2:
-                        break
-                    print(days[day] + " has " + str(len(today)))
-                    if len(today) <= 8:
-                        today.append(tests.pop())
-                        today.append(tests.pop())
-                        dailySchedules.update({days[day]: today})
-                        print("Added 2 tests to " + days[day] + " - length is now " + str(len(today)))
-                        
-            shows.update({0: mains})
-            shows.update({1: tests})
-            comicAssignments.update({comic: shows})
-
-        for comic, shows in comicAssignments.items():
-            mains = shows.get(0)
-            tests = shows.get(1)
-            for day in range(5):
-                today = dailySchedules.get(days[day])
-                if len(mains) == 1 and len(today) < 10:
-                    today.append(mains.pop())
-                if len(tests) == 1 and len(today) < 10:
-                    today.append(tests.pop())
-                dailySchedules.update({days[day]: today})
-            shows.update({0: mains})
-            shows.update({1: tests})
-            comicAssignments.update({comic: shows})
-
-        return dailySchedules
-
     def getDay(self, slotNumber): 
         i = slotNumber
         if i < 10:
@@ -298,37 +231,12 @@ class Scheduler:
         day = int(i) 
         return day
 
-    def scanSurroundings(self, timeslots, n, consecutiveMains, testsToday, mainsToday):
-        day = self.getDay(n)
-
-        todaysStart = day * 10
-        yesterdaysStart = (todaysStart - 10) if todaysStart > 0 else 0 
-        tomorrowsStart = (todaysStart + 10) if todaysStart < 40 else 40
-        
-        testsToday = 0 
-        mainsToday = 0
-        for i in range(todaysStart, todaysStart + 10):
-            if timeslots[i] is not None and timeslots[i][2] == True:
-                testsToday += 1 
-            elif timeslots[i] is not None and timeslots[i][2] == False:
-                mainsToday += 1
-
-        consecutiveMains = False
-        for i in range(yesterdaysStart, todaysStart):
-            if timeslots[i] is not None and timeslots[i][2] == False:
-                consecutiveMains = True
-        for i in range(tomorrowsStart, tomorrowsStart + 10):
-            if timeslots[i] is not None and timeslots[i][2] == False:
-                consecutiveMains = True
-    
     def applySoftConstraints(self, unorderedAssignments, n, timeslots):
-        
         assignmentScores = {}
         day = self.getDay(n)
 
         todaysStart = day * 10
         yesterdaysStart = (todaysStart - 10) if todaysStart > 0 else 0 
-
 
         for assignment in unorderedAssignments:
             assignmentScores.update({tuple(assignment): 0})
@@ -356,13 +264,10 @@ class Scheduler:
             if test and testsToday == 1:
                 assignmentScores.update({assignment: 300})
                 
-        
         sortedScores = sorted(assignmentScores.items(), key = lambda a:a[1], reverse=True)
         sortedAssignments = []
-        #print("scores in order:")
         for assignment in sortedScores:
             sortedAssignments.append(assignment[0])
-        #    print(assignment[1])
 
         return sortedAssignments
 
@@ -400,7 +305,6 @@ class Scheduler:
         if self.futureFailureDetected(slotNumber, timeslots, assignments):
             return True
 
-
         comedian = assignment[1]
         hours = 1 if assignment[2] == True else 2
         todayHours = 0 
@@ -419,22 +323,12 @@ class Scheduler:
         return False
 
     def assignShowsToDays(self, assignments, timeslots, slotNumber):
-        consecutiveMains = False
-        testsToday = 0
-        mainsToday = 0 
-
         # If we've reached 50 assignments, we've finished (base) so return true
         if slotNumber >= 50: 
             return True
-        else:
-            self.scanSurroundings(timeslots, slotNumber, consecutiveMains, testsToday, mainsToday)
 
         if timeslots[slotNumber] is not None:
             print("Error - trying to allocate to a timeslot that has already been filled")
-
-        ### TODO: order assignments by preference using scanSurroundings
-        ### TODO: detect failure early 
-        ### TODO: add heuristics to assignment backtrack to get optimum assignments
 
         assignments = self.applySoftConstraints(assignments, slotNumber, timeslots)
         
