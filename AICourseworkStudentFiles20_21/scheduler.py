@@ -107,6 +107,39 @@ class Scheduler:
             newScore = score + oldScore
             comicScore.update({c: newScore})
         
+    def constrainSoftly(self, comedians, demo, isTest, assignments):
+        # return a dict of {comedian, hours}, ordered by points
+        tt = timetable.Timetable(2)
+
+        comicScores = {}
+        for comic in comedians:
+            testCount = 0 
+            mainCount = 0 
+            if not tt.canMarket(comic, demo, isTest):
+                comicScores.update({comic: 0})        
+                continue
+            # For every assignment that this comic has, count the tests and mains. This will be their score
+            for a in assignments:
+                if not (a[1] == comic):
+                    continue
+                if a[2] == True:
+                    testCount += 1
+                elif a[2] == False:
+                    mainCount += 1
+
+            score = 1 + (testCount if isTest else mainCount)
+            comicScores.update({comic: score})        
+
+        orderedComediansList = sorted(comicScores.items(), reverse=True, key = lambda x: x[1])
+        orderedComediansDict = {}
+        for o in orderedComediansList:
+            comedian = o[0]
+            orderedComediansDict.update({comedian: comedians.get(comedian)})
+
+        return orderedComediansDict
+
+
+
     # Recursive algorithm for Task 2 
     def assignMainsAndTest(self, extendedDemoList, comediansNotBusy, assignments, demoNumber): 
         tt = timetable.Timetable(2)
@@ -119,9 +152,17 @@ class Scheduler:
         demo = extendedDemoList[demoNumber][0]
         isTest = extendedDemoList[demoNumber][1]
         
-        scnb = sorted(comediansNotBusy, key=comediansNotBusy.get)
-        for a in scnb:
-            print(a)
+        #scnb = sorted(comediansNotBusy.items(), reverse=False, key = lambda x: x[1])
+        comediansNotBusy = self.constrainSoftly(comediansNotBusy, demo, isTest, assignments)
+        # c = {}
+        # for pair in scnb:
+        #     c.update({pair[0]: pair[1]})
+            
+        # print("###")
+        # for key, value in c.items():
+        #     print(value)
+
+        # comediansNotBusy = c
 
         # For the new demographic, find the first comedian that can market it, and assign them to it
         for comedian, hours in comediansNotBusy.items():
