@@ -18,17 +18,17 @@ import scheduler
 #based on which problem you are trying to solve, and changing which problem is loaded in. 
 
 rw = ReaderWriter.ReaderWriter()
-[comedian_List, demographic_List] = rw.readRequirements("ExampleProblems/Problem8.txt")
+[comedian_List, demographic_List] = rw.readRequirements("ExampleProblems/Problem5.txt")
 sch = scheduler.Scheduler(comedian_List, demographic_List)
 
 #this method will be used to create a schedule that solves task 1
 #tt = sch.createSchedule()
 
 #This method will be used to create a schedule that solves task 2
-#tt = sch.createTestShowSchedule()
+tt = sch.createTestShowSchedule()
 
 #this method will be used to create a schedule that solves task 3
-tt = sch.createMinCostSchedule()
+#tt = sch.createMinCostSchedule()
 
 if tt.scheduleChecker(comedian_List, demographic_List):
 	print("Schedule is legal.")

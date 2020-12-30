@@ -106,6 +106,7 @@ class Scheduler:
             
             newScore = score + oldScore
             comicScore.update({c: newScore})
+        return comicScore
         
     def constrainSoftly(self, comedians, demo, isTest, assignments):
         # return a dict of {comedian, hours}, ordered by points
@@ -192,7 +193,6 @@ class Scheduler:
 
         return False
         
-    # Main function for Task 2 - initiates a backtracking recursion (assignMainsAndTest()) to solve the task 2 CSP (checked with violatesTest()) 
     def getSortedDemoList(self): 
         tt = timetable.Timetable(2)
         demos = []
@@ -238,6 +238,51 @@ class Scheduler:
             print("No valid assignment of demographics (including tests) to comedians was found")
             return False
 
+        comicScores = {}
+        comicScores = self.getShowCounts(comicScores, assignments)
+        comicScores = sorted(comicScores.items(), key = lambda x: x[1])
+
+        M = 0
+        MM = 0 
+        TTTT = 0 
+        TTT = 0 
+        TT = 0
+        T = 0 
+        MT = 0 
+        MTT = 0
+
+        Mc = 500
+        MMc = 600
+        TTTTc = 350
+        TTTc = 375
+        TTc = 225
+        Tc = 250
+        MTc = 750
+        MTTc = 725
+
+
+        for pair in comicScores:
+            s = pair[1]
+            if s == 10:
+                MM += 1 
+            elif s == 5:
+                M += 1
+            elif s == 4:
+                TTTT += 1
+            elif s == 3:
+                TTT += 1
+            elif s == 2:
+                TT += 2
+            elif s == 1:
+                T += 1
+            elif s == 6:
+                MT += 1
+            elif s == 7:
+                MTT += 1
+            
+        bestCost = (M * Mc) + (MM*MMc) + (TTTT * TTTTc) + (TTT * TTTc) + (TT * TTc) + (T * Tc) + (MT * MTc) + (MTT * MTTc)
+        print("Best possible cost: " + str(bestCost))
+            
         # Sort the list alphabetically by comedian name  
         sortedList = sorted(assignments, key = lambda c: c[1].name)
 
@@ -254,7 +299,6 @@ class Scheduler:
                 test = "test" if isTest else "main"
                 timetableObj.addSession(days[day], session, sortedList[s][1], sortedList[s][0], test)
             print(out)
-        #Here is where you schedule your timetable
 
         return timetableObj
         
