@@ -11,13 +11,13 @@ class Scheduler:
         self.comedian_List = comedian_List
         self.demographic_List = demographic_List
 
-    #########################
-    ######## TASK 1 #########
+    ######################### A simple CSP solver that uses backtracking find a valid configuation of Comics/Shows
+    ######## TASK 1 ######### Comic/Show pairs are then assigned to a schedule using a structural trick, negating the need for a CSP
     #########################
 
     # At each stage of the recursion, check the constraints haven't been violated
     def violationsMain(self, assignments):
-        ## Check that all comedians canMarket their show 
+        # Check that all comedians canMarket their show 
         tt = timetable.Timetable(1)
         showCounts = {}
         for demo, comedian in assignments.items():
@@ -25,6 +25,7 @@ class Scheduler:
             if not tt.canMarket(comedian, demo, False):
                 return True
         
+            # Get the count of shows this comic has done this week
             if showCounts.get(comedian) == None:
                 showCount = 0
             else:
@@ -42,14 +43,13 @@ class Scheduler:
     # Solves the task 1 CSP by backtracking
     # Recursively calls itself, backtracking when constraints are violated, until a valid solution of 25 demo/comedian assignments exists
     def assignMains(self, assignments, demoNumber): 
-        
         tt = timetable.Timetable(1)
 
         # If we're reached 25 assignments, we've finished so return true
         if demoNumber >= 25: 
             return True
-    
-        demo = self.demographic_List[demoNumber]
+        else:
+            demo = self.demographic_List[demoNumber]
 
         # For the new demographic, find the first comedian that can market it, and assign them to it
         for comedian in self.comedian_List:
@@ -68,7 +68,6 @@ class Scheduler:
     def createSchedule(self):
         timetableObj = timetable.Timetable(1)
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-
         assignments = {}
 
         # Begin backtrack to find a valid pairing between demographics and comedians
@@ -93,7 +92,8 @@ class Scheduler:
     ######## TASK 2 #########
     #########################
 
-    def getShowCounts(self, comicScore, assignments):
+    def getShowCounts(self, assignments):
+        comicScore = {}
         for a in assignments:
             c = a[1]
             t = a[2]
@@ -108,7 +108,7 @@ class Scheduler:
             comicScore.update({c: newScore})
         return comicScore
         
-    def constrainSoftly(self, comedians, demo, isTest, assignments):
+    def applyAssignmentHeuristics(self, comedians, demo, isTest, assignments):
         # return a dict of {comedian, hours}, ordered by points
         tt = timetable.Timetable(2)
 
@@ -139,8 +139,6 @@ class Scheduler:
 
         return orderedComediansDict
 
-
-
     # Recursive algorithm for Task 2 
     def assignMainsAndTest(self, extendedDemoList, comediansNotBusy, assignments, demoNumber): 
         tt = timetable.Timetable(2)
@@ -153,18 +151,7 @@ class Scheduler:
         demo = extendedDemoList[demoNumber][0]
         isTest = extendedDemoList[demoNumber][1]
         
-        #scnb = sorted(comediansNotBusy.items(), reverse=False, key = lambda x: x[1])
-        comediansNotBusy = self.constrainSoftly(comediansNotBusy, demo, isTest, assignments)
-        # c = {}
-        # for pair in scnb:
-        #     c.update({pair[0]: pair[1]})
-            
-        # print("###")
-        # for key, value in c.items():
-        #     print(value)
-
-        # comediansNotBusy = c
-
+        comediansNotBusy = self.applyAssignmentHeuristics(comediansNotBusy, demo, isTest, assignments)
         # For the new demographic, find the first comedian that can market it, and assign them to it
         for comedian, hours in comediansNotBusy.items():
             if tt.canMarket(comedian, demo, isTest): 
@@ -238,8 +225,7 @@ class Scheduler:
             print("No valid assignment of demographics (including tests) to comedians was found")
             return False
 
-        comicScores = {}
-        comicScores = self.getShowCounts(comicScores, assignments)
+        comicScores = self.getShowCounts(assignments)
         comicScores = sorted(comicScores.items(), key = lambda x: x[1])
 
         M = 0
@@ -316,13 +302,16 @@ class Scheduler:
         day = int(i) 
         return day
 
-    def applySoftConstraints(self, unorderedAssignments, n, timeslots):
+    # Give every possible next assignment a score, based on whether it is a test/main and the surrounding tests/mains
+    def applySchedulingHeuristics(self, unorderedAssignments, n, timeslots):
         assignmentScores = {}
         day = self.getDay(n)
 
         todaysStart = day * 10
         yesterdaysStart = (todaysStart - 10) if todaysStart > 0 else 0 
 
+        comicHours = {}
+        # Iterate over each of the possible next assignments
         for assignment in unorderedAssignments:
             assignmentScores.update({tuple(assignment): 0})
             mainYesterday = False
@@ -332,26 +321,43 @@ class Scheduler:
             c = assignment[1]
             test = assignment[2]
 
+            # Check the assignments currently in "today". If they are by the same comic, we can work out whether or not we benefit from this assignment
             for i in range(todaysStart, todaysStart + 10):
                 if timeslots[i] is not None and timeslots[i][1] == c:
                     if timeslots[i][2] == True:
                         testsToday += 1 
                     elif timeslots[i][2] == False:
                         mainToday = True
+            # If yeseterday exists, then check all the shows yesterday and see if they're by the same comic 
+            # We dont care about tests yesterday because we derive no benefit, but we do care about adjacent mains
             if yesterdaysStart > 0:
                 for i in range(yesterdaysStart, yesterdaysStart + 10):
                     if timeslots[i] is not None and timeslots[i][1] == c:
                         if timeslots[i][2] == False:
                             mainYesterday = True 
                     
+            # If this is a main, and there was a main yesterday, then we should place a high value on putting this assignment in the given timeslot
             if not test and not mainToday and mainYesterday:
                 assignmentScores.update({assignment: 400})
             if test and testsToday == 1:
                 assignmentScores.update({assignment: 300})
                 
-        sortedScores = sorted(assignmentScores.items(), key = lambda a:a[1], reverse=True)
+        # Now sort scores by number of comic scores
+        comicScores = self.getShowCounts(unorderedAssignments)
+        for assignment in assignmentScores:
+            comic = assignment[1]
+            print(comic)
+            showScore = comicScores.get(comic)
+            print(showScore)
+            assignmentScore = assignmentScores.get(assignment)
+            assignmentScores.update({assignment: showScore + assignmentScore})
+
+        sortedScores = sorted(assignmentScores.items(), key = lambda a: a[1], reverse=True)
+
         sortedAssignments = []
         for assignment in sortedScores:
+            
+            print(assignment[0][0].reference + " - " + assignment[0][1].name + " - " + (" test " if assignment[0][2] else " main ") + " - " + str(assignment[1]))
             sortedAssignments.append(assignment[0])
 
         return sortedAssignments
@@ -378,7 +384,9 @@ class Scheduler:
 
         for comic, hours in comicHours.items():
             if hours > 2: 
+                print("Comic " + comic.name + " has " + str(hours) + " remaining. Failure detected, reverting")
                 return True
+
 
         return False 
 
@@ -415,9 +423,13 @@ class Scheduler:
         if timeslots[slotNumber] is not None:
             print("Error - trying to allocate to a timeslot that has already been filled")
 
-        assignments = self.applySoftConstraints(assignments, slotNumber, timeslots)
+        print("Trying to fill slot " + str(slotNumber) + ". Ordered assignments, by score: ")
+        assignments = self.applySchedulingHeuristics(assignments, slotNumber, timeslots)
         
         for assignment in assignments:
+            print("Trying assignment " + assignment[0].reference)
+            #if slotNumber > 30:
+            #    input()
             if self.scheduleViolations(timeslots, slotNumber, assignments, assignment) == False:
                 timeslots[slotNumber] = assignment
                 assignments.remove(assignment)
@@ -433,6 +445,8 @@ class Scheduler:
         timetableObj = timetable.Timetable(3)
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         assignments = []
+        timeslots = [None] * 50
+        output = [""] * 10
 
         # Get a list of 50 shows, (1 test, 1 main for each demo) sorted by the number of comics that canMarket that show
         extendedDemoList = self.getSortedDemoList()
@@ -447,19 +461,21 @@ class Scheduler:
             print("No valid assignment of demographics (including tests) to comedians was found")
             return False
 
+        print("Got assignment of comics to shows...")
+
         sortedAssignments = sorted(assignments, key = lambda a: a[1].name)
-        for a in sortedAssignments:
-            print(a[1].name + " -      " + str(a[2]))
-        timeslots = [None] * 50
+
+        #for a in sortedAssignments:
+        #    print(a[1].name + " -      " + str(a[2]))
+
         if self.assignShowsToDays(sortedAssignments, timeslots, 0) == False:
             print("No valid way of assigning those demographics to days (cap)")
             return False
 
-        output = ["","","","","","","","","",""]
+        # Convert the list of timeslots & comic/show pairs into a timetable 
         for i in range(50):
             day = self.getDay(i)
             session = (i % 10)
-
             d = timeslots[i][0]
             c = timeslots[i][1]
             t = timeslots[i][2]
@@ -594,3 +610,16 @@ class Scheduler:
                 # print("assignments now looks like:")
                 # for a in assignments:
                 #     print(a)
+
+
+        # Taken from task 2 scheduler
+        #scnb = sorted(comediansNotBusy.items(), reverse=False, key = lambda x: x[1])
+        # c = {}
+        # for pair in scnb:
+        #     c.update({pair[0]: pair[1]})
+            
+        # print("###")
+        # for key, value in c.items():
+        #     print(value)
+
+        # comediansNotBusy = c
