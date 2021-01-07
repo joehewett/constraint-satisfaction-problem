@@ -348,8 +348,11 @@ class Scheduler:
         comicScores = self.getShowCounts(unorderedAssignments)
         for assignment in assignmentScores:
             comic = assignment[1]
+            isTest = assignment[2]
             #print(comic)
             showScore = comicScores.get(comic)
+            if not isTest and (showScore >= 5 and showScore <= 7): 
+                showScore = 0
             #print(showScore)
             assignmentScore = assignmentScores.get(assignment)
             assignmentScores.update({assignment: showScore + assignmentScore})
