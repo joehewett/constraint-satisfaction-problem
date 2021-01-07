@@ -180,6 +180,50 @@ class Scheduler:
 
         return False
         
+    def getBestPossibleScore(self, assignments):
+        comicScores = self.getShowCounts(assignments)
+        comicScores = sorted(comicScores.items(), key = lambda x: x[1])
+
+        M = 0
+        MM = 0 
+        TTTT = 0 
+        TTT = 0 
+        TT = 0
+        T = 0 
+        MT = 0 
+        MTT = 0
+
+        Mc = 500
+        MMc = 600
+        TTTTc = 350
+        TTTc = 375
+        TTc = 225
+        Tc = 250
+        MTc = 750
+        MTTc = 725
+
+        for pair in comicScores:
+            s = pair[1]
+            if s == 10:
+                MM += 1 
+            elif s == 5:
+                M += 1
+            elif s == 4:
+                TTTT += 1
+            elif s == 3:
+                TTT += 1
+            elif s == 2:
+                TT += 2
+            elif s == 1:
+                T += 1
+            elif s == 6:
+                MT += 1
+            elif s == 7:
+                MTT += 1
+            
+        bestCost = (M * Mc) + (MM*MMc) + (TTTT * TTTTc) + (TTT * TTTc) + (TT * TTc) + (T * Tc) + (MT * MTc) + (MTT * MTTc)
+        print("Best possible cost: " + str(bestCost))
+            
     def getSortedDemoList(self): 
         tt = timetable.Timetable(2)
         demos = []
@@ -225,52 +269,10 @@ class Scheduler:
             print("No valid assignment of demographics (including tests) to comedians was found")
             return False
 
-        comicScores = self.getShowCounts(assignments)
-        comicScores = sorted(comicScores.items(), key = lambda x: x[1])
-
-        M = 0
-        MM = 0 
-        TTTT = 0 
-        TTT = 0 
-        TT = 0
-        T = 0 
-        MT = 0 
-        MTT = 0
-
-        Mc = 500
-        MMc = 600
-        TTTTc = 350
-        TTTc = 375
-        TTc = 225
-        Tc = 250
-        MTc = 750
-        MTTc = 725
-
-
-        for pair in comicScores:
-            s = pair[1]
-            if s == 10:
-                MM += 1 
-            elif s == 5:
-                M += 1
-            elif s == 4:
-                TTTT += 1
-            elif s == 3:
-                TTT += 1
-            elif s == 2:
-                TT += 2
-            elif s == 1:
-                T += 1
-            elif s == 6:
-                MT += 1
-            elif s == 7:
-                MTT += 1
-            
-        bestCost = (M * Mc) + (MM*MMc) + (TTTT * TTTTc) + (TTT * TTTc) + (TT * TTc) + (T * Tc) + (MT * MTc) + (MTT * MTTc)
-        print("Best possible cost: " + str(bestCost))
-            
         # Sort the list alphabetically by comedian name  
         sortedList = sorted(assignments, key = lambda c: c[1].name)
+
+        self.getBestPossibleScore(assignments)
 
         # Add all the demo/comedian pairs as sessions
         # Filling by session rather than day, in combination with our ordered list of pairs, means we'll never schedule a comedian for 2 sessions in one day
@@ -308,7 +310,7 @@ class Scheduler:
         day = self.getDay(n)
 
         todaysStart = day * 10
-        yesterdaysStart = (todaysStart - 10) if todaysStart > 0 else 0 
+        yesterdaysStart = (todaysStart - 10) if todaysStart > 0 else -1 
 
         comicHours = {}
         # Iterate over each of the possible next assignments
@@ -330,7 +332,7 @@ class Scheduler:
                         mainToday = True
             # If yeseterday exists, then check all the shows yesterday and see if they're by the same comic 
             # We dont care about tests yesterday because we derive no benefit, but we do care about adjacent mains
-            if yesterdaysStart > 0:
+            if yesterdaysStart >= 0:
                 for i in range(yesterdaysStart, yesterdaysStart + 10):
                     if timeslots[i] is not None and timeslots[i][1] == c:
                         if timeslots[i][2] == False:
@@ -346,15 +348,16 @@ class Scheduler:
         comicScores = self.getShowCounts(unorderedAssignments)
         for assignment in assignmentScores:
             comic = assignment[1]
-            print(comic)
+            #print(comic)
             showScore = comicScores.get(comic)
-            print(showScore)
+            #print(showScore)
             assignmentScore = assignmentScores.get(assignment)
             assignmentScores.update({assignment: showScore + assignmentScore})
 
         sortedScores = sorted(assignmentScores.items(), key = lambda a: a[1], reverse=True)
 
         sortedAssignments = []
+        print("Todays start = " + str(todaysStart) + " and yesterdays start = " + str(yesterdaysStart))
         for assignment in sortedScores:
             
             print(assignment[0][0].reference + " - " + assignment[0][1].name + " - " + (" test " if assignment[0][2] else " main ") + " - " + str(assignment[1]))
@@ -384,7 +387,7 @@ class Scheduler:
 
         for comic, hours in comicHours.items():
             if hours > 2: 
-                print("Comic " + comic.name + " has " + str(hours) + " remaining. Failure detected, reverting")
+                #print("Comic " + comic.name + " has " + str(hours) + " remaining. Failure detected, reverting")
                 return True
 
 
@@ -423,13 +426,14 @@ class Scheduler:
         if timeslots[slotNumber] is not None:
             print("Error - trying to allocate to a timeslot that has already been filled")
 
-        print("Trying to fill slot " + str(slotNumber) + ". Ordered assignments, by score: ")
+        #print("Trying to fill slot " + str(slotNumber) + ". Ordered assignments, by score: ")
         assignments = self.applySchedulingHeuristics(assignments, slotNumber, timeslots)
+        print("### applied scheduling heuristic " + str(slotNumber))
         
         for assignment in assignments:
-            print("Trying assignment " + assignment[0].reference)
+            #print("Trying assignment " + assignment[0].reference)
             #if slotNumber > 30:
-            #    input()
+            #input()
             if self.scheduleViolations(timeslots, slotNumber, assignments, assignment) == False:
                 timeslots[slotNumber] = assignment
                 assignments.remove(assignment)
@@ -442,7 +446,7 @@ class Scheduler:
 
 
     def createMinCostSchedule(self):
-        timetableObj = timetable.Timetable(3)
+        tt = timetable.Timetable(3)
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         assignments = []
         timeslots = [None] * 50
@@ -461,13 +465,9 @@ class Scheduler:
             print("No valid assignment of demographics (including tests) to comedians was found")
             return False
 
-        print("Got assignment of comics to shows...")
+        self.getBestPossibleScore(assignments)
 
         sortedAssignments = sorted(assignments, key = lambda a: a[1].name)
-
-        #for a in sortedAssignments:
-        #    print(a[1].name + " -      " + str(a[2]))
-
         if self.assignShowsToDays(sortedAssignments, timeslots, 0) == False:
             print("No valid way of assigning those demographics to days (cap)")
             return False
@@ -480,146 +480,10 @@ class Scheduler:
             c = timeslots[i][1]
             t = timeslots[i][2]
             output[session] += (" T " if t else " M ") + c.name[:2] + " |"
-            timetableObj.addSession(days[day], session + 1, c, d, "test" if t else "main")
+            tt.addSession(days[day], session + 1, c, d, "test" if t else "main")
 
         for o in output:
             print(o)
 
-        
 
-        # # Add all the demo/comedian pairs as sessions
-        # for day, sessions in dailySchedules.items():
-        #     for session in range(10):
-        #         demo = sessions[session][0]
-        #         comedian = sessions[session][1]
-        #         isTest = sessions[session][2]
-        #         timetableObj.addSession(day, session + 1, comedian, demo, "test" if isTest else "main")
-
-        # for o in output:
-        #     print(o)
-
-        return timetableObj
-
-    # #This line generates a random timetable, that may not be valid. You can use this or delete it.
-    # #self.randomMainSchedule(timetableObj)
-
-    # Optimal Solution
-    # 12 Comedians doing 2 main shows each, 1 per day on Mon-Tue, Tue-Wed, Wed-Thurs, Thurs-Fri - £7200
-    # 6  Comedians doing 4 test shows each, 2 per day on any days - £2100 
-    # 1  Comedian  doing 1 test show and 1 main show, on different days. - £750
-
-    # Ma | Ma | Mb | Mb | Mt
-    # Mc | Mc | Md | Md | Tm
-    # Me | Me | Mf | Mf | Tm
-    # Mg | Mg | Mh | Mh | Tn
-    # Mi | Mi | Mj | Mj | Tn
-    # Mk | Mk | Ml | Ml | To 
-    # Tm | Tn | To | Tp | To
-    # Tm | Tn | To | Tp | Tp
-    # Tq | Tr | Ts | Ts | Tp
-    # Tq | Tr | Ts | Ts | Ty
-
-    # Dict of days containing lists
-    # Dict of Comedian->List[Demo, isTest]
-    # List of mainers: [Comedian, Demo]
-    # List of testers [Comedian, Demo]
-    # List of Others: [Comedian, Demo, isTest]
-    # Fill MT, WT, with mainers
-    # Then, if M > 2 free, fill M with testers, else T, else W etc
-    # If 
-    # If 0,1 or 1,0, assign anywhere
-    # Strategy 
-    # Don't randomly pick comics, or pick them in order of their availability.
-    # Instead, pick them based on a score? 
-    # Score can be calculated on the fly, in the recursive call
-    # Take in a list of comics and their assignments 
-    # If current demographic is Main, then order by comics that have 1 main 
-    # If current dmeographic is Test, then order by comcis that have 3, 2, 1 tests
-    # Once a comic is complete, delete 
-    # 
-    # Utility functions
-    # Num comics with 2 mains
-    # Num comics with 4 tests 
-    # Num comics with other configurations 
-
-    #Here is where you schedule your timetable
-
-    #This line generates a random timetable, that may not be valid. You can use this or delete it.
-
-    #Using the comedian_List and demographic_List, create a timetable of 5 slots for each of the 5 work days of the week.
-    #The slots are labelled 1-5, and so when creating the timetable, they can be assigned as such:
-    #   timetableObj.addSession("Monday", 1, comedian_Obj, demographic_Obj, "main")
-    #This line will set the session slot '1' on Monday to a main show with comedian_obj, which is being marketed to demographic_obj. 
-    #Note here that the comedian and demographic are represented by objects, not strings. 
-    #The day (1st argument) can be assigned the following values: "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"
-    #The slot (2nd argument) can be assigned the following values: 1, 2, 3, 4, 5 in task 1 and 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 in tasks 2 and 3. 
-    #Comedian (3rd argument) and Demographic (4th argument) can be assigned any value, but if the comedian or demographic are not in the original lists, 
-    #   your solution will be marked incorrectly. 
-    #The final, 5th argument, is the show type. For task 1, all shows should be "main". For task 2 and 3, you should assign either "main" or "test" as the show type.
-    #In tasks 2 and 3, all shows will either be a 'main' show or a 'test' show
-    
-    #demographic_List is a list of Demographic objects. A Demographic object, 'd' has the following attributes:
-    # d.reference  - the reference code of the demographic
-    # d.topics - a list of strings, describing the topics that the demographic like to see in their comedy shows e.g. ["Politics", "Family"]
-
-    #comedian_List is a list of Comedian objects. A Comedian object, 'c', has the following attributes:
-    # c.name - the name of the Comedian
-    # c.themes - a list of strings, describing the themes that the comedian uses in their comedy shows e.g. ["Politics", "Family"]
-
-    #For Task 1:
-    #Keep in mind that a comedian can only have their show marketed to a demographic 
-        #if the comedian's themes contain every topic the demographic likes to see in their comedy shows.
-    #Furthermore, a comedian can only perform one main show a day, and a maximum of two main shows over the course of the week.
-    #There will always be 25 demographics, one for each slot in the week, but the number of comedians will vary.
-    #In some problems, demographics will have 2 topics and in others, 3.
-    #A comedian will have between 3-8 different themes. 
-
-    #For Task 2 and 3:
-    #A comedian can only have their test show marketed to a demographic if the comedian's themes contain at least one topic
-        #that the demographic likes to see in their comedy shows.
-    #Comedians can only manage a 4 hours of stage time, where main shows 2 hours and test shows are 1 hour.
-    #A Comedian can not be on stage for more than 2 hours a day.
-
-    #You should not use any other methods and/or properties from the classes, these five calls are the only methods you should need. 
-    #Furthermore, you should not import anything else beyond what has been imported above. 
-    #To reiterate, the five calls are timetableObj.addSession, d.name, d.genres, c.name, c.talents
-
-    #This method should return a timetable object with a schedule that is legal according to all constraints of task 1.
-
-    #It costs £500 to hire a comedian for a single main show.
-    #If we hire a comedian for a second show, it only costs £300. (meaning 2 shows cost £800 compared to £1000)
-    #If those two shows are run on consecutive days, the second show only costs £100. (meaning 2 shows cost £600 compared to £1000)
-
-    #It costs £250 to hire a comedian for a test show, and then £50 less for each extra test show (£200, £150 and £100)
-    #If a test shows occur on the same day as anything else a comedian is in, then its cost is halved. 
-
-    #Using this method, return a timetable object that produces a schedule that is close, or equal, to the optimal solution.
-    #You are not expected to always find the optimal solution, but you should be as close as possible. 
-    #You should consider the lecture material, particular the discussions on heuristics, and how you might develop a heuristic to help you here. 
-
-                # print("Adding assignment: " + str(assignment) + " to slot " + str(slotNumber))
-                # print("Removing assignment from assignments. Assignments before:")
-                # for a in assignments:
-                #     print(a)
-                # print("Assignments after removing assignment:")
-                # for a in assignments:
-                #     print(a)
-
-                    
-                # print("Adding back assignment: " + str(timeslots[slotNumber]) + " from slot " + str(slotNumber))
-                # print("assignments now looks like:")
-                # for a in assignments:
-                #     print(a)
-
-
-        # Taken from task 2 scheduler
-        #scnb = sorted(comediansNotBusy.items(), reverse=False, key = lambda x: x[1])
-        # c = {}
-        # for pair in scnb:
-        #     c.update({pair[0]: pair[1]})
-            
-        # print("###")
-        # for key, value in c.items():
-        #     print(value)
-
-        # comediansNotBusy = c
+        return tt
