@@ -88,9 +88,10 @@ class Scheduler:
 
         return timetableObj
 
-    #########################
-    ######## TASK 2 #########
-    #########################
+    ######################### Uses a more sophisticated search involves the use of a heuristic function that orders the list of possible assigments
+    ######## TASK 2 ######### The heurstic orders the next assignment based on which one will get us towards 12 comedians with 2M, 6 with 4T and 1 with 1M 2T as this is the optimal combination
+    ######################### In this task, we don't bother using a CSP to assign Comic->Demo pairs to timeslots. We just order by comic name and assign slot by slot, meaning no comic can ever have >1 show per day, making that constriant void
+                                # this approach means we don't get an optimal score, but means we can run the timeslot assignment in O(n) rather than using a CSP to do it. 
 
     # Function to work out how many main shows and test shows a comedian is currently assigned, given a list of assignments
     def getShowCounts(self, assignments):
@@ -192,6 +193,7 @@ class Scheduler:
 
         return False
         
+    # Organies the demographics in descending order of how many comedians can fulfil the show. We can to 
     def getSortedDemoList(self): 
         tt = timetable.Timetable(2)
         demos = []
@@ -220,14 +222,13 @@ class Scheduler:
 
     # Task 2 driver - similar to task 1, but does some preprocessing and uses hueristics to cut down run time 
     def createTestShowSchedule(self):
-
         timetableObj = timetable.Timetable(2)
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         assignments = []
         # Get a list of 50 shows, (1 test, 1 main for each demo) sorted by the number of comics that canMarket that show
         extendedDemoList = self.getSortedDemoList()
 
-        # We're going to keep a list of comedians and their avaialable time, so we can avoid trying to assign shows to fully-booked comedians
+        # We're going to keep a list of comedians and their available time, so we can avoid trying to assign shows to fully-booked comedians
         comediansNotBusy = {}
         for comedian in self.comedian_List:
             comediansNotBusy.update({comedian: 4})
@@ -239,7 +240,6 @@ class Scheduler:
 
         # Sort the list alphabetically by comedian name  
         sortedList = sorted(assignments, key = lambda c: c[1].name)
-
 
         # Add all the demo/comedian pairs as sessions
         # Filling by session rather than day, in combination with our ordered list of pairs, means we'll never schedule a comedian for 2 sessions in one day
@@ -257,10 +257,13 @@ class Scheduler:
 
         return timetableObj
         
-    #########################
-    ######## TASK 3 #########
-    #########################
+    ######################### Task 3 utilises a lot of the logic from task 2, with the addition of a CSP to assign the task 2 comic->demo pairs to timeslots in the schedule
+    ######## TASK 3 ######### This second CSP uses a new heuristic, that uses a points based system for different features to decide which comic->demo pair to assign to a given timeslot
+    ######################### The benefit of scoring possible assignments with points based on what features they have is that we can change the waiting of different potential assignments in order to fine-tune the CSP for time/cost
+                                # the fine tuning can be done manually, by changing the weights of different features, or we can work out the optimal weightings via bruteforcing each combination 
+                                # of weightings and taking the average score over the 8 example sheets. This is a task for a future version, as we found a satsifactory combination of weights by hand in this version, for this problem. 
 
+    # Gets the day of the week from the index in a 50 element array
     def getDay(self, slotNumber): 
         i = slotNumber
         if i < 10:
@@ -272,21 +275,19 @@ class Scheduler:
         return day
 
     # Give every possible next assignment a score, based on whether it is a test/main and the surrounding tests/mains
+    # Then return the list of assignments in descending order of score, so that we try the highest score option next
     def applySchedulingHeuristics(self, unorderedAssignments, n, timeslots):
         assignmentScores = {}
         day = self.getDay(n)
-
         todaysStart = day * 10
         yesterdaysStart = (todaysStart - 10) if todaysStart > 0 else -1 
 
-        comicHours = {}
         # Iterate over each of the possible next assignments
         for assignment in unorderedAssignments:
             assignmentScores.update({tuple(assignment): 0})
             mainYesterday = False
             mainToday = False 
             testsToday = 0
-            d = assignment[0]
             c = assignment[1]
             test = assignment[2]
 
@@ -335,6 +336,8 @@ class Scheduler:
 
         return sortedAssignments
 
+    # Before we embark upon the route, try to identify whether we are destined to fail. 
+    # If we can spot a future failure ahead, we can cancel this search and go back without wasting time 
     def futureFailureDetected(self, slotNumber, timeslots, assignments):
         day = self.getDay(slotNumber)
 
@@ -355,14 +358,14 @@ class Scheduler:
                     hoursAlready = comicHours.get(c) if comicHours.get(c) is not None else 0
                     comicHours.update({c: hoursAlready + 1 if timeslots[i][2] else 2})
 
+        # If it's friday and someone has > 2 hours to do, it's not going to work. Back out 
         for comic, hours in comicHours.items():
             if hours > 2: 
-                #print("Comic " + comic.name + " has " + str(hours) + " remaining. Failure detected, reverting")
                 return True
-
 
         return False 
 
+    # Check for any schedule violations. 
     def scheduleViolations(self, timeslots, slotNumber, assignments, assignment):
         day = self.getDay(slotNumber)
         todaysStart = day * 10
@@ -388,6 +391,7 @@ class Scheduler:
 
         return False
 
+    # Our second CSP, that takes a list of comic->show assignments, and tries to give them time slots to produce an optimal cost.
     def assignShowsToDays(self, assignments, timeslots, slotNumber):
         # If we've reached 50 assignments, we've finished (base) so return true
         if slotNumber >= 50: 
@@ -396,14 +400,12 @@ class Scheduler:
         if timeslots[slotNumber] is not None:
             print("Error - trying to allocate to a timeslot that has already been filled")
 
-        #print("Trying to fill slot " + str(slotNumber) + ". Ordered assignments, by score: ")
+        # Before we pick an assignment, order them in order of best to worst
+        # Best and worst are judged with a points based system in applySchedulingHeuristic()
         assignments = self.applySchedulingHeuristics(assignments, slotNumber, timeslots)
-        #print("### applied scheduling heuristic " + str(slotNumber))
         
+        # Pick the next assignment, check if it violates, if not recurse until we reach failure.
         for assignment in assignments:
-            #print("Trying assignment " + assignment[0].reference)
-            #if slotNumber > 30:
-            #input()
             if self.scheduleViolations(timeslots, slotNumber, assignments, assignment) == False:
                 timeslots[slotNumber] = assignment
                 assignments.remove(assignment)
@@ -414,7 +416,10 @@ class Scheduler:
 
         return False
 
-
+    # Driver function for Task 3
+    # We have split this task into 2 CSP's.
+    # 1) We assign Comics->Demographics using the same CSP as Task 2
+    # 2) We then assign those pairs to timeslots using a new CSP specifically for producing the lowest cost schedule
     def createMinCostSchedule(self):
         tt = timetable.Timetable(3)
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
@@ -435,7 +440,6 @@ class Scheduler:
             print("No valid assignment of demographics (including tests) to comedians was found")
             return False
 
-
         sortedAssignments = sorted(assignments, key = lambda a: a[1].name)
         if self.assignShowsToDays(sortedAssignments, timeslots, 0) == False:
             print("No valid way of assigning those demographics to days (cap)")
@@ -453,6 +457,5 @@ class Scheduler:
 
         for o in output:
             print(o)
-
 
         return tt
