@@ -328,10 +328,7 @@ class Scheduler:
         sortedScores = sorted(assignmentScores.items(), key = lambda a: a[1], reverse=True)
 
         sortedAssignments = []
-        #print("Todays start = " + str(todaysStart) + " and yesterdays start = " + str(yesterdaysStart))
         for assignment in sortedScores:
-            
-            #print(assignment[0][0].reference + " - " + assignment[0][1].name + " - " + (" test " if assignment[0][2] else " main ") + " - " + str(assignment[1]))
             sortedAssignments.append(assignment[0])
 
         return sortedAssignments
