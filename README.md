@@ -1,4 +1,4 @@
-# scheduling-ai
+# Solving Constraint Satisfaction Problems in Python
 
 An implementation of a solution to a Constraint Satisfaction Problem in Python.
 
