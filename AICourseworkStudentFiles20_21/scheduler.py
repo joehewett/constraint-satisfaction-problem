@@ -92,8 +92,10 @@ class Scheduler:
     ######## TASK 2 #########
     #########################
 
+    # Function to work out how many main shows and test shows a comedian is currently assigned, given a list of assignments
     def getShowCounts(self, assignments):
         comicScore = {}
+        # Iterate over all assignments so far, and update the score for the comedian 
         for a in assignments:
             c = a[1]
             t = a[2]
@@ -106,12 +108,18 @@ class Scheduler:
             
             newScore = score + oldScore
             comicScore.update({c: newScore})
+        # Return a dict of comic:score
         return comicScore
         
+    # Given our current list of assignments of comic->demographic, take the next demographic and rank the comedians
+    # based on how well they fit the potential demographic. We return this ordered list of comedians 
+    # and try to assign them in that order 
     def applyAssignmentHeuristics(self, comedians, demo, isTest, assignments):
         # return a dict of {comedian, hours}, ordered by points
         tt = timetable.Timetable(2)
 
+        # Get some scores based on who we think would be a good fit for this demographic, based on previous assignments
+        # Score for each comedian = how many shows of each type they have done before, e.g. a comedian that has already done 3 Tests will get a score of 3 
         comicScores = {}
         for comic in comedians:
             testCount = 0 
@@ -128,9 +136,11 @@ class Scheduler:
                 elif a[2] == False:
                     mainCount += 1
 
+            # Add 1 just to indicate that this person CAN do the demo, even if they score 0 on the other suitability criteraik
             score = 1 + (testCount if isTest else mainCount)
             comicScores.update({comic: score})        
 
+        # Convert the points dictionary into a format that we can return and use
         orderedComediansList = sorted(comicScores.items(), reverse=True, key = lambda x: x[1])
         orderedComediansDict = {}
         for o in orderedComediansList:
@@ -139,7 +149,9 @@ class Scheduler:
 
         return orderedComediansDict
 
-    # Recursive algorithm for Task 2 
+    # Recursive algorithm for Task 2 and the first part of task 3
+    # Assigns 50 demographics (25 tests and 25 mains) to a set of comedians. 
+    # Each time the function recurses, it orders the potential 
     def assignMainsAndTest(self, extendedDemoList, comediansNotBusy, assignments, demoNumber): 
         tt = timetable.Timetable(2)
 
@@ -180,50 +192,6 @@ class Scheduler:
 
         return False
         
-    def getBestPossibleScore(self, assignments):
-        comicScores = self.getShowCounts(assignments)
-        comicScores = sorted(comicScores.items(), key = lambda x: x[1])
-
-        M = 0
-        MM = 0 
-        TTTT = 0 
-        TTT = 0 
-        TT = 0
-        T = 0 
-        MT = 0 
-        MTT = 0
-
-        Mc = 500
-        MMc = 600
-        TTTTc = 350
-        TTTc = 375
-        TTc = 225
-        Tc = 250
-        MTc = 750
-        MTTc = 725
-
-        for pair in comicScores:
-            s = pair[1]
-            if s == 10:
-                MM += 1 
-            elif s == 5:
-                M += 1
-            elif s == 4:
-                TTTT += 1
-            elif s == 3:
-                TTT += 1
-            elif s == 2:
-                TT += 2
-            elif s == 1:
-                T += 1
-            elif s == 6:
-                MT += 1
-            elif s == 7:
-                MTT += 1
-            
-        bestCost = (M * Mc) + (MM*MMc) + (TTTT * TTTTc) + (TTT * TTTc) + (TT * TTc) + (T * Tc) + (MT * MTc) + (MTT * MTTc)
-        print("Best possible cost: " + str(bestCost))
-            
     def getSortedDemoList(self): 
         tt = timetable.Timetable(2)
         demos = []
@@ -272,7 +240,6 @@ class Scheduler:
         # Sort the list alphabetically by comedian name  
         sortedList = sorted(assignments, key = lambda c: c[1].name)
 
-        self.getBestPossibleScore(assignments)
 
         # Add all the demo/comedian pairs as sessions
         # Filling by session rather than day, in combination with our ordered list of pairs, means we'll never schedule a comedian for 2 sessions in one day
@@ -360,10 +327,10 @@ class Scheduler:
         sortedScores = sorted(assignmentScores.items(), key = lambda a: a[1], reverse=True)
 
         sortedAssignments = []
-        print("Todays start = " + str(todaysStart) + " and yesterdays start = " + str(yesterdaysStart))
+        #print("Todays start = " + str(todaysStart) + " and yesterdays start = " + str(yesterdaysStart))
         for assignment in sortedScores:
             
-            print(assignment[0][0].reference + " - " + assignment[0][1].name + " - " + (" test " if assignment[0][2] else " main ") + " - " + str(assignment[1]))
+            #print(assignment[0][0].reference + " - " + assignment[0][1].name + " - " + (" test " if assignment[0][2] else " main ") + " - " + str(assignment[1]))
             sortedAssignments.append(assignment[0])
 
         return sortedAssignments
@@ -431,7 +398,7 @@ class Scheduler:
 
         #print("Trying to fill slot " + str(slotNumber) + ". Ordered assignments, by score: ")
         assignments = self.applySchedulingHeuristics(assignments, slotNumber, timeslots)
-        print("### applied scheduling heuristic " + str(slotNumber))
+        #print("### applied scheduling heuristic " + str(slotNumber))
         
         for assignment in assignments:
             #print("Trying assignment " + assignment[0].reference)
@@ -468,7 +435,6 @@ class Scheduler:
             print("No valid assignment of demographics (including tests) to comedians was found")
             return False
 
-        self.getBestPossibleScore(assignments)
 
         sortedAssignments = sorted(assignments, key = lambda a: a[1].name)
         if self.assignShowsToDays(sortedAssignments, timeslots, 0) == False:
